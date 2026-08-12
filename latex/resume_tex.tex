@@ -1,0 +1,145 @@
+\documentclass[a4paper,10pt]{article}
+
+% =========================
+% PAGE / LAYOUT
+% =========================
+\usepackage[
+    left=0.55in,
+    right=0.55in,
+    top=0.5in,
+    bottom=0.35in
+]{geometry}
+
+% =========================
+% PACKAGES
+% =========================
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{ragged2e}
+
+% =========================
+% SPACING
+% =========================
+\titlespacing{\section}{0pt}{6pt}{4pt}
+
+\setlist[itemize]{
+    itemsep=2pt,
+    topsep=2pt,
+    leftmargin=*
+}
+
+\setlength{\parskip}{1pt}
+\setlength{\parindent}{0pt}
+
+% =========================
+% SECTION STYLE
+% =========================
+\titleformat{\section}
+    {\normalsize\bfseries}
+    {}
+    {0em}
+    {}
+    [\titlerule]
+
+% =========================
+% HYPERLINK SETTINGS
+% =========================
+\hypersetup{
+    colorlinks=true,
+    urlcolor=black,
+    linkcolor=black
+}
+
+\begin{document}
+
+% ============================================================
+% HEADER
+% ============================================================
+
+\begin{center}
+
+{\Large \textbf{{{NAME}}}}\\[-3pt]
+
+{{DEGREE_TITLE}}\\[-2pt]
+
+{{PHONE}}
+\quad
+\href{mailto:{{EMAIL}}}{{{EMAIL}}}
+\quad
+\href{https://linkedin.com/in/{{LINKEDIN_USERNAME}}}{LinkedIn}
+\quad
+\href{https://github.com/{{GITHUB_USERNAME}}}{GitHub}
+\\[-3pt]
+
+{{LOCATION}}
+
+\end{center}
+
+\vspace{-6pt}
+
+
+% ============================================================
+% SUMMARY
+% ============================================================
+
+\section*{Summary}
+
+{{SUMMARY}}
+
+
+% ============================================================
+% EDUCATION
+% ============================================================
+
+\section*{Education}
+
+{{EDUCATION}}
+
+
+% ============================================================
+% SKILLS
+% ============================================================
+
+\section*{Skills}
+
+{{SKILLS}}
+
+
+% ============================================================
+% PROJECTS
+% ============================================================
+
+\section*{Projects}
+
+{{PROJECTS}}
+
+
+% ============================================================
+% CERTIFICATIONS & AWARDS
+% ============================================================
+
+\section*{Certifications \& Awards}
+
+{{CERTIFICATIONS}}
+
+
+% ============================================================
+% LANGUAGES
+% ============================================================
+
+\section*{Languages}
+
+{{LANGUAGES}}
+
+
+% ============================================================
+% INTERESTS
+% ============================================================
+
+\section*{Interests}
+
+{{INTERESTS}}
+
+
+\end{document}

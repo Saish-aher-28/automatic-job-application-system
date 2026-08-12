@@ -1,0 +1,71 @@
+# =============================================================
+# SECURITY — NEVER COMMIT THESE
+# =============================================================
+.env
+*.json
+!profile/projects/*.json
+!resume_engine/data/*.json
+serviceAccount*.json
+*serviceaccount*.json
+*service_account*.json
+credentials*.json
+firebase*.json
+google-credentials*.json
+
+# =============================================================
+# PYTHON
+# =============================================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# =============================================================
+# VIRTUAL ENVIRONMENT
+# =============================================================
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# =============================================================
+# LATEX GENERATED OUTPUT (not the master template)
+# =============================================================
+latex/output/
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.blg
+*.bbl
+
+# =============================================================
+# IDE / OS
+# =============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =============================================================
+# TESTING
+# =============================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/

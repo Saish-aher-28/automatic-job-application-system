@@ -1,0 +1,17 @@
+# ============================================================
+# Phase 1 — Automatic Job Application System
+# Python Dependencies
+# ============================================================
+
+# Firebase Admin SDK — Firestore access
+firebase-admin>=6.5.0
+
+# Environment variable loading
+python-dotenv>=1.0.0
+
+# PDF page-count validation (fitz module)
+PyMuPDF>=1.24.0
+
+# Testing
+pytest>=8.0.0
+pytest-mock>=3.12.0

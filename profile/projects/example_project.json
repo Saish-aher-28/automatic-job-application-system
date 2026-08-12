@@ -1,0 +1,30 @@
+{
+    "_comment": "Example project JSON for import via: python -m resume_engine.import_project profile/projects/example_project.json",
+    "_instructions": "Remove this _comment and _instructions field before importing. Fill in your real values.",
+
+    "name": "YOUR_PROJECT_NAME",
+    "year": "2024",
+    "description": "A brief description of what your project does and its impact.",
+    "technologies": ["Python", "Flask", "React", "PostgreSQL"],
+    "categories": ["backend", "web"],
+    "keywords": ["api", "web-app", "full-stack"],
+    "resume_bullets": [
+        "Built and deployed a REST API serving 1,000+ daily requests with 99.9% uptime.",
+        "Reduced query latency by 40% through database indexing and caching."
+    ],
+    "resume_content": {
+        "general": [],
+        "machine_learning": [],
+        "data_science": [],
+        "backend": [
+            "Designed scalable backend architecture using Flask and PostgreSQL."
+        ],
+        "frontend": [],
+        "cloud": [],
+        "devops": []
+    },
+    "github_url": "https://github.com/YOUR_USERNAME/YOUR_REPO",
+    "project_url": "",
+    "priority": 1,
+    "enabled": true
+}
