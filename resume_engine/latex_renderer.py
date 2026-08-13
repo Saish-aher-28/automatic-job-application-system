@@ -37,6 +37,19 @@ from resume_engine.validators import (
 
 
 # ────────────────────────────────────────────────────────────────────
+# Deterministic skill category order (matches original resume)
+# ────────────────────────────────────────────────────────────────────
+
+_SKILL_CATEGORY_ORDER = [
+    "Web Development",
+    "Programming Languages",
+    "Databases",
+    "AI/ML",
+    "Other",
+]
+
+
+# ────────────────────────────────────────────────────────────────────
 # Section renderers
 # ────────────────────────────────────────────────────────────────────
 
@@ -44,55 +57,90 @@ def render_education(records: list[dict]) -> str:
     """
     Generate the LaTeX block for the Education section.
 
-    Each record produces a block:
-        \\textbf{Degree in Field} \\hfill Start – Graduation\\\\
-        Institution, Location\\\\
-        Detail 1 | Detail 2 | ...
+    Matches original resume format exactly:
 
-    Multiple records are separated by \\vspace{4pt}.
+        \\textbf{Sanjivani College of Engineering, Kopargaon}\\\\
+        B.Tech -- Information Technology (CGPA: 8.4) \\hfill 2023 -- Present\\\\
+        Higher Secondary Certificate (HSC) \\hfill 65\\%  2023\\\\
+        Secondary School Certificate (SSC) \\hfill 88\\%  2021
+
+    The institution+location appears FIRST (bold, line 1).
+    The degree + CGPA + date range is on line 2.
+    HSC line with score + year is on line 3.
+    SSC line with score + year is on line 4.
     """
     if not records:
         return "\\textit{No education records found.}"
 
     blocks = []
     for rec in records:
-        degree     = latex_escape(rec.get("degree", ""))
-        field      = latex_escape(rec.get("field", ""))
-        spec       = latex_escape(rec.get("specialization", ""))
-        institution= latex_escape(rec.get("institution", ""))
-        location   = latex_escape(rec.get("location", ""))
-        start      = str(rec.get("start_year", "") or "")
-        grad       = str(rec.get("graduation_year", "") or "")
-        details    = coerce_list(rec.get("details", []))
+        degree      = latex_escape(rec.get("degree", ""))
+        field       = latex_escape(rec.get("field", ""))
+        institution = latex_escape(rec.get("institution", ""))
+        location    = latex_escape(rec.get("location", ""))
+        start       = str(rec.get("start_year", "") or "")
+        grad_raw    = rec.get("graduation_year")
+        cgpa        = latex_escape(str(rec.get("cgpa", "") or ""))
+        hsc_score   = latex_escape(str(rec.get("hsc_score", "") or ""))
+        hsc_year    = str(rec.get("hsc_year", "") or "")
+        ssc_score   = latex_escape(str(rec.get("ssc_score", "") or ""))
+        ssc_year    = str(rec.get("ssc_year", "") or "")
 
-        # Build degree line
-        degree_parts = [p for p in [degree, field] if p]
-        degree_line  = " in ".join(degree_parts) if degree_parts else ""
-        if spec:
-            degree_line += f", {spec}"
+        # Institution + Location (line 1, bold)
+        inst_loc = ", ".join(p for p in [institution, location] if p)
+
+        # Degree line
+        degree_str = " -- ".join(p for p in [degree, field] if p)
+
+        # CGPA inline in degree line if available
+        if cgpa:
+            degree_str += f" (CGPA: {cgpa})"
 
         # Date range
-        if start and grad:
-            date_range = f"{start} -- {grad}"
-        elif grad:
-            date_range = str(grad)
+        if start and grad_raw:
+            date_range = f"{start} -- {latex_escape(str(grad_raw))}"
         elif start:
-            date_range = str(start)
+            date_range = f"{start} -- Present"
+        elif grad_raw:
+            date_range = str(grad_raw)
         else:
             date_range = ""
 
         lines = []
-        if degree_line or date_range:
-            lines.append(
-                f"\\textbf{{{degree_line}}} \\hfill {date_range}\\\\"
-            )
-        if institution or location:
-            inst_loc = ", ".join(p for p in [institution, location] if p)
-            lines.append(f"{inst_loc}\\\\")
 
-        if details:
-            escaped_details = [latex_escape(str(d)) for d in details]
-            lines.append(" \\textbar\\ ".join(escaped_details))
+        # Line 1: institution (bold)
+        if inst_loc:
+            lines.append(f"\\textbf{{{inst_loc}}}\\\\")
+
+        # Line 2: degree (CGPA: x) \hfill date
+        if degree_str and date_range:
+            lines.append(f"{degree_str} \\hfill {date_range}\\\\")
+        elif degree_str:
+            lines.append(f"{degree_str}\\\\")
+
+        # Line 3: HSC
+        if hsc_score or hsc_year:
+            hsc_right = "  ".join(p for p in [hsc_score, hsc_year] if p)
+            lines.append(
+                f"Higher Secondary Certificate (HSC) \\hfill {hsc_right}\\\\"
+            )
+
+        # Line 4: SSC
+        if ssc_score or ssc_year:
+            ssc_right = "  ".join(p for p in [ssc_score, ssc_year] if p)
+            lines.append(
+                f"Secondary School Certificate (SSC) \\hfill {ssc_right}"
+            )
+
+        # Fallback: if no structured HSC/SSC data, render plain details
+        if not (hsc_score or hsc_year or ssc_score or ssc_year):
+            details = coerce_list(rec.get("details", []))
+            if details:
+                for detail in details:
+                    lines.append(latex_escape(str(detail)) + "\\\\")
+                # strip trailing \\ from last
+                if lines[-1].endswith("\\\\"):
+                    lines[-1] = lines[-1][:-2]
 
         blocks.append("\n".join(lines))
 
@@ -106,13 +154,21 @@ def render_skills(grouped: dict[str, list[str]]) -> str:
     Each category becomes one line:
         \\textbf{Category:} Skill1, Skill2, Skill3
 
-    Categories are rendered in their natural order (from Firestore sort).
+    Categories are rendered in the FIXED ORDER defined by _SKILL_CATEGORY_ORDER
+    (matching the original resume). Any categories not in that list are appended
+    at the end in alphabetical order.
     """
     if not grouped:
         return "\\textit{No skills found.}"
 
+    # Build ordered key list
+    ordered_keys = [k for k in _SKILL_CATEGORY_ORDER if k in grouped]
+    remaining    = sorted(k for k in grouped if k not in _SKILL_CATEGORY_ORDER)
+    all_keys     = ordered_keys + remaining
+
     lines = []
-    for category, skills in grouped.items():
+    for category in all_keys:
+        skills = grouped.get(category, [])
         if not skills:
             continue
         cat_escaped    = latex_escape(category)
@@ -126,58 +182,63 @@ def render_projects(records: list[dict]) -> str:
     """
     Generate the LaTeX block for the Projects section.
 
-    Each project block:
-        \\textbf{Project Name} \\hfill Year
-        Technologies: Tech1, Tech2, ...
-        \\begin{itemize}
-          \\item Bullet 1
-          \\item Bullet 2
+    Matches original resume format:
+
+        \\textbf{Project Name} \\hfill Year \\\\
+        Python, Flask, Scikit-learn, XGBoost, Pandas
+        \\begin{itemize}[itemsep=0pt, parsep=0pt]
+          \\item Bullet description.
         \\end{itemize}
 
-    Projects are separated by \\vspace{2pt}.
+    Notes:
+    - Technologies are on their own line WITHOUT a label (no "Technologies:" prefix).
+    - Itemize uses [itemsep=0pt, parsep=0pt] for compact spacing.
+    - Projects are separated by \\vspace{2pt}.
     """
     if not records:
         return "\\textit{No projects found.}"
 
     blocks = []
     for proj in records:
-        name   = latex_escape(proj.get("name", "Untitled Project"))
-        year   = latex_escape(str(proj.get("year", "") or ""))
-        techs  = coerce_list(proj.get("technologies", []))
+        name    = latex_escape(proj.get("name", "Untitled Project"))
+        year    = latex_escape(str(proj.get("year", "") or ""))
+        techs   = coerce_list(proj.get("technologies", []))
         bullets = coerce_list(proj.get("resume_bullets", []))
-        desc   = proj.get("description", "")
-        github = proj.get("github_url", "")
-        purl   = proj.get("project_url", "")
+        desc    = proj.get("description", "")
+        github  = proj.get("github_url", "")
+        purl    = proj.get("project_url", "")
 
         lines = []
 
-        # Header line: name + year
+        # Header: bold name \hfill year  \\
         header = f"\\textbf{{{name}}}"
         if year:
             header += f" \\hfill {year}"
-        lines.append(header + "\\\\[-3pt]")
+        lines.append(header + "\\\\")
 
-        # Technologies line
+        # Technologies: plain italic line, no label
         if techs:
             tech_str = ", ".join(latex_escape(t) for t in techs)
-            lines.append(f"\\textit{{Technologies:}} {tech_str}\\\\[-3pt]")
+            lines.append(f"\\textit{{{tech_str}}}\\\\")
 
-        # Links (GitHub / Project URL)
+        # Optional links line
         link_parts = []
         if github:
             link_parts.append(f"\\href{{{latex_escape_url(github)}}}{{GitHub}}")
         if purl:
             link_parts.append(f"\\href{{{latex_escape_url(purl)}}}{{Project}}")
         if link_parts:
-            lines.append(" \\textbar\\ ".join(link_parts) + "\\\\[-3pt]")
+            lines.append(" \\textbar\\ ".join(link_parts) + "\\\\")
 
-        # Bullets (preferred) or fallback to description
+        # Bullets (compact itemize)
         if bullets:
             item_lines = "\n".join(
                 f"  \\item {latex_escape(str(b))}" for b in bullets
             )
             lines.append(
-                "\\begin{itemize}\n" + item_lines + "\n\\end{itemize}"
+                "\\begin{itemize}[itemsep=0pt, parsep=0pt]\n"
+                + item_lines
+                + "\n\\end{itemize}"
             )
         elif desc:
             lines.append(latex_escape(desc))
@@ -191,16 +252,19 @@ def render_certifications(records: list[dict]) -> str:
     """
     Generate the LaTeX block for the Certifications & Awards section.
 
-    Each entry:
-        \\textbf{Cert Name} -- Issuer \\hfill Date
+    Matches original resume format (bullet list):
 
-    or, if a credential_url exists:
-        \\href{url}{\\textbf{Cert Name}} -- Issuer \\hfill Date
+        \\begin{itemize}[itemsep=0pt, parsep=0pt]
+          \\item Cert Name -- Issuer
+          \\item ...
+        \\end{itemize}
+
+    If a credential_url exists, the name is hyperlinked.
     """
     if not records:
         return "\\textit{No certifications found.}"
 
-    lines = []
+    items = []
     for cert in records:
         name   = latex_escape(cert.get("name", ""))
         issuer = latex_escape(cert.get("issuer", ""))
@@ -208,9 +272,9 @@ def render_certifications(records: list[dict]) -> str:
         url    = cert.get("credential_url", "")
 
         if url:
-            name_part = f"\\href{{{latex_escape_url(url)}}}{{\\textbf{{{name}}}}}"
+            name_part = f"\\href{{{latex_escape_url(url)}}}{{{name}}}"
         else:
-            name_part = f"\\textbf{{{name}}}"
+            name_part = name
 
         parts = [name_part]
         if issuer:
@@ -220,48 +284,53 @@ def render_certifications(records: list[dict]) -> str:
         if date:
             line += f" \\hfill {date}"
 
-        lines.append(line)
+        items.append(f"  \\item {line}")
 
-    return "\\\\\n".join(lines)
+    item_block = "\n".join(items)
+    return (
+        "\\begin{itemize}[itemsep=0pt, parsep=0pt]\n"
+        + item_block
+        + "\n\\end{itemize}"
+    )
 
 
 def render_languages(records: list[dict]) -> str:
     """
     Generate the LaTeX block for the Languages section.
 
-    Format:
-        English -- Professional working fluency \\quad Hindi -- Full professional fluency
-
-    All on one line separated by \\quad for compact spacing,
-    or line-break separated if preferred.
+    Matches original resume format (one per line):
+        English -- Professional working fluency\\\\
+        Hindi -- Full professional fluency\\\\
+        Marathi -- Native speaker
     """
     if not records:
         return "\\textit{No languages found.}"
 
-    parts = []
+    lines = []
     for lang in records:
         name        = latex_escape(lang.get("name", ""))
         proficiency = latex_escape(lang.get("proficiency", ""))
         if name and proficiency:
-            parts.append(f"{name} -- {proficiency}")
+            lines.append(f"{name} -- {proficiency}")
         elif name:
-            parts.append(name)
+            lines.append(name)
 
-    return " \\quad \\textbar\\ \\quad ".join(parts)
+    return "\\\\\n".join(lines)
 
 
 def render_interests(records: list[dict]) -> str:
     """
     Generate the LaTeX block for the Interests section.
 
-    Format: comma-separated on a single line.
-    Example: Reading Books, Chess, Open Source Contributions
+    Matches original resume format (one per line):
+        Reading Books\\\\
+        Exploring Places and New Things
     """
     if not records:
         return "\\textit{No interests found.}"
 
     names = [latex_escape(i.get("name", "")) for i in records if i.get("name")]
-    return ", ".join(names)
+    return "\\\\\n".join(names)
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -291,13 +360,13 @@ def render_resume(resume_data: dict) -> str:
     with open(template_path, "r", encoding="utf-8") as f:
         tex = f.read()
 
-    profile      = resume_data.get("profile", {})
-    projects     = resume_data.get("projects", [])
-    skills       = resume_data.get("skills", {})
-    education    = resume_data.get("education", [])
+    profile        = resume_data.get("profile", {})
+    projects       = resume_data.get("projects", [])
+    skills         = resume_data.get("skills", {})
+    education      = resume_data.get("education", [])
     certifications = resume_data.get("certifications", [])
-    languages    = resume_data.get("languages", [])
-    interests    = resume_data.get("interests", [])
+    languages      = resume_data.get("languages", [])
+    interests      = resume_data.get("interests", [])
 
     # ── Header / contact fields ──────────────────────────────────────
     linkedin_url = profile.get("linkedin", "")
@@ -327,7 +396,7 @@ def render_resume(resume_data: dict) -> str:
     import re
     remaining = re.findall(r"\{\{[A-Z_]+\}\}", tex)
     if remaining:
-        print(f"  ⚠  Unfilled placeholders remaining in template: {set(remaining)}")
+        print(f"  Warning: Unfilled placeholders remaining in template: {set(remaining)}")
 
     return tex
 

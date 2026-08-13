@@ -237,13 +237,16 @@ class TestRenderInterests:
         result = render_interests([{"name": "Chess"}])
         assert "Chess" in result
 
-    def test_multiple_comma_separated(self):
+    def test_multiple_one_per_line(self):
+        """Interests must be one per line (not comma-separated) to match original resume."""
         interests = [{"name": "Chess"}, {"name": "Reading"}, {"name": "Hiking"}]
         result = render_interests(interests)
         assert "Chess" in result
         assert "Reading" in result
         assert "Hiking" in result
-        assert "," in result
+        # Must be line-separated (\\), NOT comma-separated
+        assert "\\\\" in result
+        assert "Chess, Reading" not in result
 
 
 # ────────────────────────────────────────────────────────────────────
