@@ -14,6 +14,12 @@ from pathlib import Path
 
 
 def credentials_available() -> bool:
+    # Load .env so the check works at pytest collection time
+    from pathlib import Path as _Path
+    _env = _Path(__file__).resolve().parent.parent / ".env"
+    if _env.exists():
+        from dotenv import load_dotenv
+        load_dotenv(_env, override=False)
     cred = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
     return bool(cred) and Path(cred).exists()
 
