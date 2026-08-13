@@ -13,7 +13,7 @@ Pipeline:
     9. Validate all loaded data
    10. Render LaTeX using latex_renderer
    11. Write .tex to output directory
-   12. Compile PDF (if pdflatex available)
+   12. Compile PDF (if tectonic or pdflatex available)
    13. Validate page count
    14. Return a result summary
 
@@ -61,7 +61,7 @@ def count_pdf_pages(pdf_path: Path) -> Optional[int]:
         Page count, or None if counting fails.
     """
     try:
-        import fitz  # PyMuPDF
+        import pymupdf as fitz  # PyMuPDF (replaces deprecated `import fitz`)
         doc = fitz.open(str(pdf_path))
         count = doc.page_count
         doc.close()
@@ -71,68 +71,122 @@ def count_pdf_pages(pdf_path: Path) -> Optional[int]:
         return None
 
 
-def compile_pdf(tex_path: Path) -> tuple[bool, Optional[Path], str]:
+def _detect_latex_engine() -> tuple:
     """
-    Compile a .tex file to PDF using pdflatex.
+    Detect the best available LaTeX engine.
 
-    Runs pdflatex twice for stable cross-references.
+    Priority:
+      1. tectonic  -- lightweight, auto-downloads packages on first use
+      2. pdflatex  -- traditional (MiKTeX / TeX Live)
+
+    Returns:
+        (engine_name, executable_path) or (None, None)
+    """
+    # tectonic.exe may be sitting in the project root if installed via the
+    # drop-ps1 script rather than added to PATH
+    local_tectonic = Path(__file__).resolve().parent.parent / "tectonic.exe"
+
+    for name, candidates in [
+        ("tectonic", ["tectonic", str(local_tectonic)]),
+        ("pdflatex", ["pdflatex"]),
+    ]:
+        for candidate in candidates:
+            found = shutil.which(candidate)
+            if found:
+                return name, found
+            if Path(candidate).exists():
+                return name, candidate
+
+    return None, None
+
+
+def compile_pdf(tex_path: Path) -> tuple:
+    """
+    Compile a .tex file to PDF using the best available LaTeX engine.
+
+    Engine priority:
+      1. Tectonic  -- single pass, auto-downloads needed packages
+      2. pdflatex  -- double pass (MiKTeX / TeX Live)
 
     Returns:
         (success: bool, pdf_path: Path|None, message: str)
     """
-    pdflatex = shutil.which("pdflatex")
-    if not pdflatex:
+    engine_name, engine_exe = _detect_latex_engine()
+
+    if engine_name is None:
         msg = (
             "\n"
-            "  ✗  pdflatex not found. The .tex file was generated successfully,\n"
-            "     but PDF compilation requires a LaTeX distribution.\n"
+            "  No LaTeX engine found. The .tex was generated successfully,\n"
+            "  but PDF compilation requires a LaTeX engine.\n"
             "\n"
-            "  To install LaTeX on Windows:\n"
-            "    Option 1 (Recommended): MiKTeX\n"
-            "      → https://miktex.org/download\n"
-            "      → Download and run the installer\n"
-            "      → Restart your terminal after installation\n"
+            "  Recommended (lightweight): Tectonic\n"
+            "    PowerShell:\n"
+            "      iex ((New-Object System.Net.WebClient).DownloadString('https://drop-ps1.fullyjustified.net'))\n"
+            "    Or: https://github.com/tectonic-typesetting/tectonic/releases\n"
             "\n"
-            "    Option 2: TeX Live\n"
-            "      → https://tug.org/texlive/\n"
+            "  Alternative (full): MiKTeX -- https://miktex.org/download\n"
             "\n"
             "  After installing, run:  python -m resume_engine.main\n"
         )
         return False, None, msg
 
     output_dir = tex_path.parent
-    tex_name   = tex_path.name
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        for run in range(2):  # Two passes for stable references
+        if engine_name == "tectonic":
+            # Single pass; tectonic downloads missing packages automatically.
+            # Allow extra time on first run for package downloads.
             result = subprocess.run(
                 [
-                    pdflatex,
-                    "-interaction=nonstopmode",
-                    "-output-directory", str(output_dir),
+                    engine_exe,
+                    "--outdir", str(output_dir),
+                    "--keep-logs",
                     str(tex_path),
                 ],
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=300,
             )
-            if result.returncode != 0:
-                # Try to find the error line in pdflatex output
-                error_lines = [
-                    line for line in result.stdout.splitlines()
-                    if line.startswith("!") or "Error" in line
-                ]
-                error_summary = "\n".join(error_lines[:5]) if error_lines else result.stdout[-500:]
-                return False, None, f"pdflatex failed:\n{error_summary}"
+            compiler_label = "Tectonic"
+        else:
+            # pdflatex: two passes for stable cross-references.
+            for _ in range(2):
+                result = subprocess.run(
+                    [
+                        engine_exe,
+                        "-interaction=nonstopmode",
+                        "-output-directory", str(output_dir),
+                        str(tex_path),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+            compiler_label = "pdflatex"
 
-        pdf_path = output_dir / tex_name.replace(".tex", ".pdf")
+        if result.returncode != 0:
+            stderr = result.stderr or ""
+            stdout = result.stdout or ""
+            combined = stdout + "\n" + stderr
+            error_lines = [
+                line for line in combined.splitlines()
+                if line.startswith("!") or "error" in line.lower()
+            ]
+            error_summary = "\n".join(error_lines[:8]) if error_lines else combined[-600:]
+            return False, None, f"{compiler_label} failed:\n{error_summary}"
+
+        pdf_path = output_dir / (tex_path.stem + ".pdf")
         if not pdf_path.exists():
-            return False, None, "pdflatex ran but PDF file was not created."
+            return False, None, f"{compiler_label} ran but PDF was not created at {pdf_path}"
 
-        return True, pdf_path, "PDF compiled successfully."
+        return True, pdf_path, f"PDF compiled successfully with {compiler_label}."
 
     except subprocess.TimeoutExpired:
-        return False, None, "pdflatex timed out after 60 seconds."
+        return False, None, (
+            f"{engine_name} timed out. "
+            "On first Tectonic run, package downloads may take a few minutes -- try again."
+        )
     except Exception as e:
         return False, None, f"Unexpected error during PDF compilation: {e}"
 

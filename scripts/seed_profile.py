@@ -1,17 +1,10 @@
 """
-seed_profile.py — Seed your profile data into Firestore.
-
-IMPORTANT:
-  Fill in every "YOUR_VALUE_HERE" with your real information
-  before running this script.
-
-  The system will NEVER invent data. Only what you provide here
-  is stored in Firestore.
+seed_profile.py — Seed Saish Aher's profile data into Firestore.
 
 Usage:
     python scripts/seed_profile.py
 
-This script is idempotent — running it again updates the existing document.
+This script is idempotent — running it again updates existing documents.
 """
 
 import sys
@@ -25,103 +18,153 @@ from resume_engine.firebase_client import get_firestore_client
 
 
 # ════════════════════════════════════════════════════════════════
-# FILL IN YOUR REAL INFORMATION BELOW
-# DO NOT leave "YOUR_VALUE_HERE" when running for real.
+# PROFILE
 # ════════════════════════════════════════════════════════════════
 
 PROFILE = {
-    # Your full name as it should appear on the resume
-    "name": "YOUR_VALUE_HERE",
-
-    # e.g. "B.E. Computer Science" or "M.Tech Data Science"
-    "degree_title": "YOUR_VALUE_HERE",
-
-    # Contact
-    "email":    "YOUR_VALUE_HERE",
-    "phone":    "YOUR_VALUE_HERE",
-    "location": "YOUR_VALUE_HERE",     # e.g. "Mumbai, India"
-
-    # Social links — full URLs
-    "linkedin":  "https://linkedin.com/in/YOUR_USERNAME",
-    "github":    "https://github.com/YOUR_USERNAME",
-    "portfolio": "",                    # Leave empty if not applicable
-
-    # Professional summary (2–4 sentences)
-    "summary": "YOUR_VALUE_HERE",
+    "name":         "Saish Aher",
+    "degree_title": "B.Tech Information Technology | Honors in AI & ML",
+    "email":        "saishaher28@gmail.com",
+    "phone":        "+91 9699703471",
+    "location":     "Kopargaon, Maharashtra, India",
+    "linkedin":     "https://linkedin.com/in/saish-aher-28",
+    "github":       "https://github.com/Saish-aher-28",
+    "portfolio":    "",
+    "summary": (
+        "Results-driven B.Tech Information Technology student (CGPA: 8.4) "
+        "with Honors in Artificial Intelligence and Machine Learning. "
+        "Skilled in Python, Java, React, Flask, AWS, Machine Learning, "
+        "Cloud Computing, Linux, and Data Analytics. "
+        "Hands-on experience developing AI-powered, cloud-native, and full-stack applications. "
+        "Strong foundation in Data Structures, OOP, DBMS, and problem solving. "
+        "Seeking Software Engineer opportunities."
+    ),
 }
 
 
 # ════════════════════════════════════════════════════════════════
-# SKILLS — fill in your real skills
-# Format: {document_id: {name, category, sort_order}}
+# SKILLS  (exactly as on the resume)
 # ════════════════════════════════════════════════════════════════
 
 SKILLS = [
-    # Programming Languages
-    {"name": "Python",      "category": "Programming Languages", "sort_order": 1},
-    {"name": "C++",         "category": "Programming Languages", "sort_order": 2},
-    {"name": "Java",        "category": "Programming Languages", "sort_order": 3},
-
     # Web Development
-    {"name": "HTML",        "category": "Web Development", "sort_order": 1},
-    {"name": "CSS",         "category": "Web Development", "sort_order": 2},
-    {"name": "JavaScript",  "category": "Web Development", "sort_order": 3},
-    {"name": "React",       "category": "Web Development", "sort_order": 4},
+    {"name": "HTML",               "category": "Web Development",        "sort_order": 1},
+    {"name": "CSS",                "category": "Web Development",        "sort_order": 2},
+    {"name": "JavaScript",         "category": "Web Development",        "sort_order": 3},
+    {"name": "React",              "category": "Web Development",        "sort_order": 4},
+
+    # Programming Languages
+    {"name": "Python",             "category": "Programming Languages",  "sort_order": 1},
+    {"name": "C",                  "category": "Programming Languages",  "sort_order": 2},
+    {"name": "C++",                "category": "Programming Languages",  "sort_order": 3},
+    {"name": "Java (OOP)",         "category": "Programming Languages",  "sort_order": 4},
 
     # Databases
-    {"name": "MySQL",       "category": "Databases", "sort_order": 1},
-    {"name": "PostgreSQL",  "category": "Databases", "sort_order": 2},
-    {"name": "MongoDB",     "category": "Databases", "sort_order": 3},
-    {"name": "Firebase",    "category": "Databases", "sort_order": 4},
+    {"name": "MySQL",              "category": "Databases",              "sort_order": 1},
+    {"name": "MongoDB",            "category": "Databases",              "sort_order": 2},
+    {"name": "Firebase",           "category": "Databases",              "sort_order": 3},
 
-    # AI/ML — add your actual skills here
-    {"name": "YOUR_SKILL",  "category": "AI/ML", "sort_order": 1},
+    # AI/ML
+    {"name": "Scikit-learn",       "category": "AI/ML",                  "sort_order": 1},
+    {"name": "Pandas",             "category": "AI/ML",                  "sort_order": 2},
+    {"name": "NumPy",              "category": "AI/ML",                  "sort_order": 3},
+    {"name": "Matplotlib",         "category": "AI/ML",                  "sort_order": 4},
+    {"name": "Seaborn",            "category": "AI/ML",                  "sort_order": 5},
+    {"name": "Security Analytics", "category": "AI/ML",                  "sort_order": 6},
+    {"name": "Rule-based Classification", "category": "AI/ML",           "sort_order": 7},
 
     # Other
-    {"name": "Git",         "category": "Other", "sort_order": 1},
-    {"name": "Linux",       "category": "Other", "sort_order": 2},
+    {"name": "Git",                "category": "Other",                  "sort_order": 1},
+    {"name": "GitHub",             "category": "Other",                  "sort_order": 2},
+    {"name": "Linux/OS Internals", "category": "Other",                  "sort_order": 3},
+    {"name": "Docker",             "category": "Other",                  "sort_order": 4},
+    {"name": "Kubernetes",         "category": "Other",                  "sort_order": 5},
+    {"name": "GitHub Actions",     "category": "Other",                  "sort_order": 6},
 ]
 
 
 # ════════════════════════════════════════════════════════════════
-# EDUCATION — fill in your real education records
+# EDUCATION
 # ════════════════════════════════════════════════════════════════
 
 EDUCATION = [
     {
-        "degree":          "Bachelor of Engineering",
-        "field":           "Computer Science",
-        "specialization":  "",
-        "institution":     "YOUR_INSTITUTION_HERE",
-        "location":        "YOUR_CITY_HERE",
-        "start_year":      2021,
-        "graduation_year": 2025,
-        "details":         [
-            "CGPA: YOUR_CGPA/10",
-            "HSC: YOUR_HSC%",
-            "SSC: YOUR_SSC%",
+        "degree":          "B.Tech",
+        "field":           "Information Technology",
+        "specialization":  "Honors in Artificial Intelligence and Machine Learning",
+        "institution":     "Sanjivani College of Engineering",
+        "location":        "Kopargaon",
+        "start_year":      2023,
+        "graduation_year": None,          # Present / ongoing
+        "details": [
+            "CGPA: 8.4",
+            "HSC: 65%",
+            "SSC: 88%",
         ],
         "sort_order": 1,
     },
-    # Add more education records as needed
 ]
 
 
 # ════════════════════════════════════════════════════════════════
-# CERTIFICATIONS — fill in your real certifications
+# CERTIFICATIONS  (exactly as on the resume)
 # ════════════════════════════════════════════════════════════════
 
 CERTIFICATIONS = [
     {
-        "name":           "YOUR_CERTIFICATION_NAME",
-        "issuer":         "YOUR_ISSUER",
-        "date":           "2024",
+        "name":           "Amazon Cloud Operations",
+        "issuer":         "AWS Training and Certification",
+        "date":           "",
         "credential_url": "",
-        "skills":         [],
+        "skills":         ["AWS", "Cloud Operations"],
         "enabled":        True,
         "sort_order":     1,
     },
-    # Add more certifications as needed
+    {
+        "name":           "Google Cloud Career Launchpad – Data Analytics Track",
+        "issuer":         "Google Cloud",
+        "date":           "",
+        "credential_url": "",
+        "skills":         ["Data management", "Cloud storage", "Data transformation", "Visualization"],
+        "enabled":        True,
+        "sort_order":     2,
+    },
+    {
+        "name":           "Programming in Java",
+        "issuer":         "NPTEL",
+        "date":           "",
+        "credential_url": "",
+        "skills":         ["Java", "OOP"],
+        "enabled":        True,
+        "sort_order":     3,
+    },
+    {
+        "name":           "The Joy of Computing using Python",
+        "issuer":         "NPTEL",
+        "date":           "",
+        "credential_url": "",
+        "skills":         ["Python"],
+        "enabled":        True,
+        "sort_order":     4,
+    },
+    {
+        "name":           "Employment Communication",
+        "issuer":         "NPTEL",
+        "date":           "",
+        "credential_url": "",
+        "skills":         [],
+        "enabled":        True,
+        "sort_order":     5,
+    },
+    {
+        "name":           "Data Science Methods and Algorithm",
+        "issuer":         "Udemy",
+        "date":           "2026",
+        "credential_url": "",
+        "skills":         ["Data Science", "Machine Learning"],
+        "enabled":        True,
+        "sort_order":     6,
+    },
 ]
 
 
@@ -132,7 +175,7 @@ CERTIFICATIONS = [
 LANGUAGES = [
     {"name": "English", "proficiency": "Professional working fluency", "sort_order": 1},
     {"name": "Hindi",   "proficiency": "Full professional fluency",    "sort_order": 2},
-    # Add your native language or others as needed
+    {"name": "Marathi", "proficiency": "Native speaker",               "sort_order": 3},
 ]
 
 
@@ -141,8 +184,8 @@ LANGUAGES = [
 # ════════════════════════════════════════════════════════════════
 
 INTERESTS = [
-    {"name": "Reading Books",  "sort_order": 1},
-    {"name": "YOUR_INTEREST",  "sort_order": 2},
+    {"name": "Reading Books",               "sort_order": 1},
+    {"name": "Exploring Places and New Things", "sort_order": 2},
 ]
 
 
@@ -152,9 +195,9 @@ INTERESTS = [
 
 def seed_all() -> None:
     print()
-    print("═" * 60)
-    print("  Seeding Firestore with profile data")
-    print("═" * 60)
+    print("=" * 60)
+    print("  Seeding Firestore -- Saish Aher's Profile")
+    print("=" * 60)
     print()
 
     db = get_firestore_client()
@@ -166,8 +209,19 @@ def seed_all() -> None:
     # Skills
     print("  Seeding skills...")
     for skill in SKILLS:
-        skill_id = skill["name"].lower().replace(" ", "_").replace("+", "plus")
-        db.collection("skills").document(skill_id).set({**skill, "enabled": True}, merge=True)
+        skill_id = (
+            skill["name"]
+            .lower()
+            .replace(" ", "_")
+            .replace("+", "plus")
+            .replace("/", "_")
+            .replace("(", "")
+            .replace(")", "")
+            .replace("-", "_")
+        )
+        db.collection("skills").document(skill_id).set(
+            {**skill, "enabled": True}, merge=True
+        )
         print(f"    ✓ {skill['category']}: {skill['name']}")
 
     # Education
@@ -175,7 +229,7 @@ def seed_all() -> None:
     for i, edu in enumerate(EDUCATION):
         doc_id = f"edu_{i+1:03d}"
         db.collection("education").document(doc_id).set(edu, merge=True)
-        print(f"    ✓ {edu.get('institution', 'Unknown')}")
+        print(f"    ✓ {edu.get('institution', 'Unknown')} — {edu.get('field', '')}")
 
     # Certifications
     print("  Seeding certifications...")
@@ -188,22 +242,26 @@ def seed_all() -> None:
     print("  Seeding languages...")
     for i, lang in enumerate(LANGUAGES):
         doc_id = f"lang_{i+1:03d}"
-        db.collection("languages").document(doc_id).set({**lang, "enabled": True}, merge=True)
-        print(f"    ✓ {lang['name']}")
+        db.collection("languages").document(doc_id).set(
+            {**lang, "enabled": True}, merge=True
+        )
+        print(f"    ✓ {lang['name']} — {lang['proficiency']}")
 
     # Interests
     print("  Seeding interests...")
     for i, interest in enumerate(INTERESTS):
         doc_id = f"interest_{i+1:03d}"
-        db.collection("interests").document(doc_id).set({**interest, "enabled": True}, merge=True)
+        db.collection("interests").document(doc_id).set(
+            {**interest, "enabled": True}, merge=True
+        )
         print(f"    ✓ {interest['name']}")
 
     print()
-    print("  ✓  All data seeded successfully.")
+    print("  ✓  All profile data seeded successfully.")
     print()
     print("  Next steps:")
-    print("    1. Add your projects: python -m resume_engine.add_project")
-    print("    2. Generate resume:   python -m resume_engine.main")
+    print("    1. Seed projects:  python scripts/seed_projects.py")
+    print("    2. Generate resume: python -m resume_engine.main")
     print()
 
 

@@ -11,6 +11,7 @@ serviceAccount*.json
 credentials*.json
 firebase*.json
 google-credentials*.json
+firebase-credentials/
 
 # =============================================================
 # PYTHON
