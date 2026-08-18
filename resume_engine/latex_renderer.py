@@ -118,18 +118,26 @@ def render_education(records: list[dict]) -> str:
         elif degree_str:
             lines.append(f"{degree_str}\\\\")
 
-        # Line 3: HSC
+        # Line 3: HSC  — double \hfill puts score in centre, year at far right
         if hsc_score or hsc_year:
-            hsc_right = "  ".join(p for p in [hsc_score, hsc_year] if p)
+            parts = []
+            if hsc_score:
+                parts.append(f"\\hfill {hsc_score}")
+            if hsc_year:
+                parts.append(f"\\hfill {hsc_year}")
             lines.append(
-                f"Higher Secondary Certificate (HSC) \\hfill {hsc_right}\\\\"
+                f"Higher Secondary Certificate (HSC)" + "".join(parts) + "\\\\"
             )
 
-        # Line 4: SSC
+        # Line 4: SSC  — double \hfill puts score in centre, year at far right
         if ssc_score or ssc_year:
-            ssc_right = "  ".join(p for p in [ssc_score, ssc_year] if p)
+            parts = []
+            if ssc_score:
+                parts.append(f"\\hfill {ssc_score}")
+            if ssc_year:
+                parts.append(f"\\hfill {ssc_year}")
             lines.append(
-                f"Secondary School Certificate (SSC) \\hfill {ssc_right}"
+                f"Secondary School Certificate (SSC)" + "".join(parts)
             )
 
         # Fallback: if no structured HSC/SSC data, render plain details
@@ -210,16 +218,16 @@ def render_projects(records: list[dict]) -> str:
 
         lines = []
 
-        # Header: bold name \hfill year  \\
+        # Header: bold name \hfill year — \\[-3pt] pulls next line up tight
         header = f"\\textbf{{{name}}}"
         if year:
             header += f" \\hfill {year}"
-        lines.append(header + "\\\\")
+        lines.append(header + "\\\\[-3pt]")
 
-        # Technologies: plain italic line, no label
+        # Technologies: plain italic, pulled tight to title and bullet
         if techs:
             tech_str = ", ".join(latex_escape(t) for t in techs)
-            lines.append(f"\\textit{{{tech_str}}}\\\\")
+            lines.append(f"\\textit{{{tech_str}}}\\\\[-2pt]")
 
         # Optional links line
         link_parts = []
@@ -228,15 +236,15 @@ def render_projects(records: list[dict]) -> str:
         if purl:
             link_parts.append(f"\\href{{{latex_escape_url(purl)}}}{{Project}}")
         if link_parts:
-            lines.append(" \\textbar\\ ".join(link_parts) + "\\\\")
+            lines.append(" \\textbar\\ ".join(link_parts) + "\\\\[-2pt]")
 
-        # Bullets (compact itemize)
+        # Bullets — topsep=0pt removes the gap between tech line and bullet
         if bullets:
             item_lines = "\n".join(
                 f"  \\item {latex_escape(str(b))}" for b in bullets
             )
             lines.append(
-                "\\begin{itemize}[itemsep=0pt, parsep=0pt]\n"
+                "\\begin{itemize}[itemsep=0pt, parsep=0pt, topsep=0pt]\n"
                 + item_lines
                 + "\n\\end{itemize}"
             )
