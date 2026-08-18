@@ -218,42 +218,51 @@ def render_projects(records: list[dict]) -> str:
 
         lines = []
 
-        # Header: bold name \hfill year — \\[-3pt] pulls next line up tight
+        # Title: \\[-6pt] pulls the tech line immediately below
         header = f"\\textbf{{{name}}}"
         if year:
             header += f" \\hfill {year}"
-        lines.append(header + "\\\\[-3pt]")
+        lines.append(header + "\\\\[-6pt]")
 
-        # Technologies: plain italic, pulled tight to title and bullet
+        # Tech line: NO trailing \\ — ends the paragraph naturally.
+        # The \vspace{-8pt} placed before the itemize then cancels the
+        # paragraph gap (parskip=1pt) + any residual baseline distance.
         if techs:
             tech_str = ", ".join(latex_escape(t) for t in techs)
-            lines.append(f"\\textit{{{tech_str}}}\\\\[-2pt]")
+            lines.append(f"\\textit{{{tech_str}}}")
 
-        # Optional links line
+        # Optional links line (also no trailing \\)
         link_parts = []
         if github:
             link_parts.append(f"\\href{{{latex_escape_url(github)}}}{{GitHub}}")
         if purl:
             link_parts.append(f"\\href{{{latex_escape_url(purl)}}}{{Project}}")
         if link_parts:
-            lines.append(" \\textbar\\ ".join(link_parts) + "\\\\[-2pt]")
+            lines.append(" \\textbar\\ ".join(link_parts))
 
-        # Bullets — topsep=0pt removes the gap between tech line and bullet
+        # Bullets: \vspace{-8pt} kills the inter-paragraph gap before itemize.
+        # partopsep=0pt removes the extra space added when itemize follows a
+        # paragraph break. Together these make the bullet sit flush below the
+        # tech line with zero visual gap.
         if bullets:
             item_lines = "\n".join(
                 f"  \\item {latex_escape(str(b))}" for b in bullets
             )
             lines.append(
-                "\\begin{itemize}[itemsep=0pt, parsep=0pt, topsep=0pt]\n"
+                "\\vspace{-8pt}\n"
+                "\\begin{itemize}[itemsep=0pt, parsep=0pt, topsep=0pt, partopsep=0pt]\n"
                 + item_lines
-                + "\n\\end{itemize}"
+                + "\n\\end{itemize}\n"
+                + "\\vspace{-4pt}"   # close gap before next project title
             )
         elif desc:
             lines.append(latex_escape(desc))
 
         blocks.append("\n".join(lines))
 
-    return "\n\n\\vspace{2pt}\n".join(blocks)
+    # \vspace{1pt}: just enough to visually separate project blocks
+    # without leaving a large blank line.
+    return "\n\n\\vspace{1pt}\n".join(blocks)
 
 
 def render_certifications(records: list[dict]) -> str:
