@@ -147,6 +147,7 @@ class TestRenderProjects:
         assert r"\&" in result
 
     def test_multiple_projects_separated(self):
+        """Both projects must appear and be separated — original uses natural paragraph flow, not \\vspace."""
         projects = [
             {"name": "Proj A", "description": "d", "technologies": []},
             {"name": "Proj B", "description": "d", "technologies": []},
@@ -154,7 +155,11 @@ class TestRenderProjects:
         result = render_projects(projects)
         assert "Proj A" in result
         assert "Proj B" in result
-        assert "vspace" in result
+        # Projects separated by a blank line (natural LaTeX paragraph break)
+        assert "Proj A" in result and "Proj B" in result
+        proj_a_pos = result.index("Proj A")
+        proj_b_pos = result.index("Proj B")
+        assert proj_b_pos > proj_a_pos, "Proj B must come after Proj A"
 
     def test_github_url_in_href(self):
         proj = {
