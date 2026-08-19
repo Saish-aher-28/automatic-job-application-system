@@ -1,0 +1,52 @@
+Job Title: Backend Developer
+
+Company: TechNova Solutions
+
+Location: Pune, India (Hybrid)
+
+Employment Type: Full-time
+
+About the Role:
+We are looking for a skilled Backend Developer to join our growing engineering team. You will design, build, and maintain scalable backend systems and APIs that power our SaaS platform.
+
+Key Responsibilities:
+- Design and develop RESTful APIs using Python and Flask or FastAPI.
+- Build and optimize database schemas in PostgreSQL and MongoDB.
+- Integrate third-party services and payment gateways.
+- Deploy and manage applications on AWS (EC2, S3, Lambda).
+- Write unit tests and integration tests to ensure code quality.
+- Participate in code reviews and contribute to technical documentation.
+- Collaborate with frontend developers and DevOps engineers.
+
+Required Skills:
+- Python (3.10+)
+- Flask or FastAPI
+- REST APIs
+- PostgreSQL
+- MongoDB
+- AWS (EC2, S3, Lambda, IAM)
+- Git and GitHub
+- Linux / Shell scripting
+
+Preferred Skills:
+- Docker (containerization)
+- Kubernetes is a plus
+- Redis for caching
+- CI/CD pipelines (GitHub Actions or Jenkins)
+- Familiarity with microservices architecture
+
+Experience:
+- 1–3 years of professional backend development experience.
+- Experience building production-grade REST APIs.
+- Experience with cloud deployment on AWS.
+
+Education:
+- B.Tech / B.E. in Computer Science, Information Technology, or related field.
+- OR equivalent practical experience.
+
+Nice to Have:
+- Exposure to message queues (RabbitMQ, Kafka)
+- Experience with GraphQL
+
+Keywords:
+Backend, Python, Flask, FastAPI, REST API, PostgreSQL, MongoDB, AWS, Docker, Kubernetes

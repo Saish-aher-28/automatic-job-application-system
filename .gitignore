@@ -70,3 +70,8 @@ desktop.ini
 .coverage
 htmlcov/
 .tox/
+
+# =============================================================
+# PHASE 2 — Generated output (JSON analysis files)
+# =============================================================
+Phase 2/output/*.json
