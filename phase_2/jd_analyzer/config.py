@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env from the Phase 1 root (parent of "Phase 2")
+# Load .env from the Phase 1 root (parent of "phase_2")
 _ROOT = Path(__file__).resolve().parent.parent.parent   # e:\AutoResume\Phase 1
 _ENV_PATH = _ROOT / ".env"
 load_dotenv(dotenv_path=_ENV_PATH, override=False)
@@ -27,8 +27,8 @@ class Phase2Config:
         "GOOGLE_APPLICATION_CREDENTIALS", ""
     )
 
-    # ── Phase 2 paths ─────────────────────────────────────────────────────────
-    PHASE2_ROOT:   Path = Path(__file__).resolve().parent.parent   # e:\…\Phase 2
+    # ── phase_2 paths ─────────────────────────────────────────────────────────
+    PHASE2_ROOT:   Path = Path(__file__).resolve().parent.parent   # e:\…\phase_2
     OUTPUT_DIR:    Path = PHASE2_ROOT / "output"
     INPUT_DIR:     Path = PHASE2_ROOT / "input"
 

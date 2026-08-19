@@ -706,12 +706,12 @@ The parsed JD is validated against the following Pydantic model (`JDAnalysis`):
 Run the analyzer on any text file containing a job description:
 
 ```bash
-python -m phase_2.jd_analyzer.main "Phase 2/input/sample_jd.txt"
+python -m phase_2.jd_analyzer.main "phase_2/input/sample_jd.txt"
 ```
 
 #### Output
 - Displays the structured analysis on stdout (in clean ASCII).
-- Saves the validated JSON locally to: `Phase 2/output/<document_id>.json`.
+- Saves the validated JSON locally to: `phase_2/output/<document_id>.json`.
 - Saves to Firestore under the collection `job_descriptions/` with an auto-generated document ID.
 
 ### Testing
@@ -719,13 +719,13 @@ Offline unit/mocked tests can be run without an API key or Firestore connection.
 
 #### Run Phase 2 Tests
 ```bash
-python -m pytest "Phase 2/tests/" -c "Phase 2/pytest.ini" -v
+python -m pytest "phase_2/tests/" -c "phase_2/pytest.ini" -v
 ```
 
 #### Run All Tests (Phase 1 + Phase 2)
 ```bash
 python -m pytest tests/ -c pytest.ini -q
-python -m pytest "Phase 2/tests/" -c "Phase 2/pytest.ini" -q
+python -m pytest "phase_2/tests/" -c "phase_2/pytest.ini" -q
 ```
 
 ### Phase 2 Limitations

@@ -74,4 +74,4 @@ htmlcov/
 # =============================================================
 # PHASE 2 — Generated output (JSON analysis files)
 # =============================================================
-Phase 2/output/*.json
+phase_2/output/*.json
