@@ -24,6 +24,7 @@
 16. [How to Run Tests](#16-how-to-run-tests)
 17. [Security Requirements](#17-security-requirements)
 18. [Troubleshooting](#18-troubleshooting)
+19. [Phase 2 -- Job Description Analysis Engine](#19-phase-2---job-description-analysis-engine)
 
 ---
 
@@ -613,3 +614,121 @@ venv\Scripts\activate      # Windows
 pip install -r requirements.txt
 python -m pytest tests/ -v
 ```
+
+---
+
+## 19. Phase 2 -- Job Description Analysis Engine
+
+### Overview
+Phase 2 implements a standalone Job Description (JD) Analysis system. It extracts structured information from any raw job description using Gemini Flash-Lite and persists both the raw text and the structured analysis to Firestore.
+
+This phase is completely decoupled from the Phase 1 resume generation pipeline.
+
+### Architecture
+
+```
+                    JOB DESCRIPTION
+                           │
+                           ▼
+                      JD INPUT
+                           │
+                           ▼
+                  GEMINI FLASH-LITE (gemini-3.1-flash-lite)
+                           │
+                           ▼
+                   STRUCTURED JSON
+                           │
+                           ▼
+                  PYTHON VALIDATOR (Pydantic v2)
+                           │
+                    ┌──────┴──────┐
+                    │             │
+                  VALID        INVALID
+                    │             │
+                    ▼             ▼
+               FIRESTORE       RETRY/
+                    │            ERROR
+                    ▼
+             job_descriptions
+                    │
+                    ▼
+             STRUCTURED JD
+```
+
+### Environment Variables
+Add these to your existing `.env` file at the root:
+
+```env
+# Gemini API Key -- get yours at https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=your-gemini-api-key-here
+
+# Gemini model to use
+GEMINI_MODEL=gemini-3.1-flash-lite
+
+# Maximum retries on transient Gemini API errors (default: 3)
+GEMINI_MAX_RETRIES=3
+
+# Gemini API timeout in seconds (default: 60)
+GEMINI_TIMEOUT_SECONDS=60
+```
+
+### Structured Schema
+The parsed JD is validated against the following Pydantic model (`JDAnalysis`):
+
+```json
+{
+  "job_title": "string or null",
+  "company": "string or null",
+  "role_category": "string or null",
+  "experience_level": "string or null",
+  "employment_type": "string or null",
+  "location": "string or null",
+  "required_skills": ["string"],
+  "preferred_skills": ["string"],
+  "technologies": ["string"],
+  "responsibilities": ["string"],
+  "education_requirements": ["string"],
+  "experience_requirements": ["string"],
+  "keywords": ["string"]
+}
+```
+
+### Firestore Collection
+- **Collection name:** `job_descriptions`
+- **Document structure:**
+  - `raw_text`: the exact un-modified JD text submitted.
+  - `analysis`: the validated structured analysis object (matching schema above).
+  - `model`: the Gemini model identifier used.
+  - `created_at`: ISO-8601 server timestamp.
+  - `analysis_version`: `"1.0"`.
+
+### CLI Usage
+Run the analyzer on any text file containing a job description:
+
+```bash
+python -m phase_2.jd_analyzer.main "Phase 2/input/sample_jd.txt"
+```
+
+#### Output
+- Displays the structured analysis on stdout (in clean ASCII).
+- Saves the validated JSON locally to: `Phase 2/output/<document_id>.json`.
+- Saves to Firestore under the collection `job_descriptions/` with an auto-generated document ID.
+
+### Testing
+Offline unit/mocked tests can be run without an API key or Firestore connection. Real integration tests run automatically when `GEMINI_API_KEY` is present.
+
+#### Run Phase 2 Tests
+```bash
+python -m pytest "Phase 2/tests/" -c "Phase 2/pytest.ini" -v
+```
+
+#### Run All Tests (Phase 1 + Phase 2)
+```bash
+python -m pytest tests/ -c pytest.ini -q
+python -m pytest "Phase 2/tests/" -c "Phase 2/pytest.ini" -q
+```
+
+### Phase 2 Limitations
+- **No Scraping:** URLs are not supported as inputs yet. JDs must be supplied as text files or raw text.
+- **No Matching:** Does not select, rank, or filter resume projects (matching is part of Phase 3).
+- **No Tailoring:** Does not modify the resume or rewrite bullets (tailoring is part of Phase 3).
