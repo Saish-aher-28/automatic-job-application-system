@@ -64,3 +64,27 @@ class TestScorer:
             project_scores=[],
         )
         assert score == 80.0
+
+    def test_score_formula_audit(self):
+        """Create a test verifying overall = 87.5 for [100, 50, 80, 90] (Req 7)"""
+        score = calculate_overall_match_score(
+            required_score=100.0,
+            preferred_score=50.0,
+            tech_score=80.0,
+            project_scores=[90.0, 90.0, 90.0],
+        )
+        assert score == 87.5
+
+    def test_score_formula_audit_non_integer(self):
+        """Create a test using non-integer values: 83.3333, 66.6667, 72.2222, 91.1111 (Req 7)"""
+        # overall = 83.3333 * 0.50 + 66.6667 * 0.15 + 72.2222 * 0.15 + 91.1111 * 0.20
+        #         = 41.66665 + 10.000005 + 10.83333 + 18.22222
+        #         = 80.722205 -> rounded to 1 decimal place = 80.7
+        score = calculate_overall_match_score(
+            required_score=83.3333,
+            preferred_score=66.6667,
+            tech_score=72.2222,
+            project_scores=[91.1111, 91.1111, 91.1111],
+        )
+        assert score == 80.7
+

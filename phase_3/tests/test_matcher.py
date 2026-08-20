@@ -284,4 +284,50 @@ class TestJDProfileMatcherPipeline:
         assert "Kubernetes" in result.missing_preferred_skills
         assert "Kubernetes" not in result.matched_preferred_skills
         assert "Kubernetes" in result.missing_technologies
+        assert "Kubernetes" not in result.technologies if hasattr(result, "technologies") else True
         assert "Kubernetes" not in result.matched_technologies
+
+    def test_all_projects_ranking_and_order(self):
+        """Create or strengthen a test with at least 7 projects (Req 13)"""
+        projects = []
+        # Create 7 projects with distinct names to return different mock scores
+        mock_scores = {}
+        for i in range(7):
+            name = f"ProjectRanked{i}"
+            # Assign descending semantic scores: 95, 88, 74, 42, 20, 10, 5
+            score_val = [95.0, 88.0, 74.0, 42.0, 20.0, 10.0, 5.0][i]
+            mock_scores[name] = score_val
+            projects.append({
+                "_id": f"proj-{i}",
+                "name": name,
+                "technologies": ["Python"],
+                "description": f"Description for project {i} containing Python.",
+            })
+
+        mock_sem = _make_mock_semantic_matcher(mock_scores)
+        matcher = JDProfileMatcher(semantic_matcher=mock_sem)
+
+        result = matcher.match(
+            jd_document_id="test-jd-123",
+            jd_data=SAMPLE_JD_DATA,
+            profile_data=SAMPLE_PROFILE,
+            skills=SAMPLE_SKILLS,
+            projects=projects,
+        )
+
+        # 1. Verify all 7 projects are evaluated and present in ranked_projects
+        assert len(result.ranked_projects) == 7
+
+        # 2. Verify ranked_projects are sorted descending by final_project_score
+        scores = [rp.final_project_score for rp in result.ranked_projects]
+        assert scores == sorted(scores, reverse=True)
+
+        # 3. Verify top 3 projects are used to calculate project_relevance_score
+        # Scores are:
+        # proj-0: prelim approx 23.7, semantic 95.0 -> final = 23.7*0.3 + 95*0.7 = 7.11 + 66.5 = 73.61 -> 73.6
+        # proj-1: prelim approx 23.7, semantic 88.0 -> final = 23.7*0.3 + 88*0.7 = 7.11 + 61.6 = 68.71 -> 68.7
+        # proj-2: prelim approx 23.7, semantic 74.0 -> final = 23.7*0.3 + 74*0.7 = 7.11 + 51.8 = 58.91 -> 58.9
+        # Top 3 average should match result.project_relevance_score
+        expected_avg = round((scores[0] + scores[1] + scores[2]) / 3.0, 1)
+        assert result.project_relevance_score == expected_avg
+

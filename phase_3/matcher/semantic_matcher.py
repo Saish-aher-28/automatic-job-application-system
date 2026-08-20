@@ -93,7 +93,9 @@ class SemanticMatcher:
                     project.get("name"), attempt, config.MAX_RETRIES
                 )
                 result = self._call_gemini(jd_data, project)
-                return result
+                # Filter out hallucinated matches without explicit evidence
+                validated = self._validate_and_sanitize(result, project)
+                return validated
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
                 logger.warning("Gemini evaluation attempt %d failed: %s", attempt, exc)
@@ -105,6 +107,93 @@ class SemanticMatcher:
             f"Failed to evaluate project semantic relevance after {config.MAX_RETRIES} attempts. "
             f"Last error: {last_exc}"
         ) from last_exc
+
+    def _validate_and_sanitize(self, result: ProjectSemanticMatch, project: dict) -> ProjectSemanticMatch:
+        """
+        Filters out any matched requirement returned by Gemini that has zero concrete evidence
+        in the project technologies, keywords, or text details (hallucination protection).
+        """
+        import re
+        from phase_3.matcher.normalization import normalize_skill_name
+
+        valid_matched = []
+        invalid_matched = []
+
+        for req in result.matched_requirements:
+            req_norm = normalize_skill_name(req).lower().strip()
+            if not req_norm:
+                continue
+
+            # 1. Check technologies
+            has_evidence = False
+            for tech in project.get("technologies", []) or []:
+                if tech and normalize_skill_name(tech).lower().strip() == req_norm:
+                    has_evidence = True
+                    break
+
+            # 2. Check keywords & categories
+            if not has_evidence:
+                for kw in (project.get("keywords", []) or []) + (project.get("categories", []) or []):
+                    if kw and normalize_skill_name(kw).lower().strip() == req_norm:
+                        has_evidence = True
+                        break
+
+            # 3. Check description and bullets (using word boundary search with exceptions)
+            if not has_evidence:
+                desc = project.get("description", "") or ""
+                bullets = project.get("resume_bullets", []) or []
+                text_corpus = (desc + " " + " ".join(bullets)).lower()
+
+                if req_norm == "react":
+                    # Must not match "react native"
+                    pattern = r"\breact\b(?!\s*native)"
+                elif req_norm == "java":
+                    # Must not match "javascript"
+                    pattern = r"\bjava\b(?!\s*script)"
+                else:
+                    pattern = rf"\b{re.escape(req_norm)}\b"
+
+                if re.search(pattern, text_corpus):
+                    has_evidence = True
+
+            if has_evidence:
+                valid_matched.append(req)
+            else:
+                invalid_matched.append(req)
+
+        # Re-calculate score and adjust lists if hallucinations were found
+        relevance_score = result.relevance_score
+        missing_requirements = list(result.missing_requirements)
+
+        if invalid_matched:
+            logger.warning(
+                "Gemini hallucinated matching requirements %s for project '%s'. Filtering them out.",
+                invalid_matched, project.get("name")
+            )
+            # Add to missing requirements list
+            for req in invalid_matched:
+                if req not in missing_requirements:
+                    missing_requirements.append(req)
+
+            # Reduce score proportionally
+            orig_len = len(result.matched_requirements)
+            if orig_len > 0:
+                ratio = len(valid_matched) / orig_len
+                relevance_score = round(relevance_score * ratio, 1)
+            else:
+                relevance_score = 0.0
+
+        return ProjectSemanticMatch(
+            relevance_score=relevance_score,
+            matched_requirements=valid_matched,
+            supporting_evidence=[
+                ev for ev in result.supporting_evidence
+                if not any(inv.lower() in ev.lower() for inv in invalid_matched)
+            ],
+            missing_requirements=missing_requirements,
+            reason=result.reason + (" (Hallucinated requirements filtered out by validation layer.)" if invalid_matched else ""),
+        )
+
 
     def _call_gemini(self, jd_data: dict, project: dict) -> ProjectSemanticMatch:
         """Helper to invoke Gemini API with schema validation."""

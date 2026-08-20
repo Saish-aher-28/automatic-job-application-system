@@ -25,6 +25,7 @@
 17. [Security Requirements](#17-security-requirements)
 18. [Troubleshooting](#18-troubleshooting)
 19. [Phase 2 -- Job Description Analysis Engine](#19-phase-2---job-description-analysis-engine)
+20. [Phase 3 — JD ↔ User Profile Matching Engine](#20-phase-3--jd--user-profile-matching-engine)
 
 ---
 
@@ -732,3 +733,123 @@ python -m pytest "phase_2/tests/" -c "phase_2/pytest.ini" -q
 - **No Scraping:** URLs are not supported as inputs yet. JDs must be supplied as text files or raw text.
 - **No Matching:** Does not select, rank, or filter resume projects (matching is part of Phase 3).
 - **No Tailoring:** Does not modify the resume or rewrite bullets (tailoring is part of Phase 3).
+
+---
+
+## 20. Phase 3 — JD ↔ User Profile Matching Engine
+
+### Overview
+Phase 3 builds a Job Description ↔ User Profile Matching Engine. It maps a structured Job Description (produced by Phase 2) against the user's Firestore profile data (projects, skills, education, certifications, and experience) from Phase 1. It calculates deterministic match scores, ranks project relevance using a two-stage approach, and saves the matches to Firestore.
+
+Phase 3 is read-only with respect to the user's profile and does not modify the LaTeX template or compile resumes.
+
+### Architecture
+
+```
+                    STRUCTURED JD
+                         │
+                         ▼
+                 ┌───────────────┐
+                 │  JD Matcher   │
+                 └───────────────┘
+                         ▲
+                         │
+                  USER PROFILE
+                         │
+            ┌────────────┼────────────┐
+            ▼            ▼            ▼
+          Skills      Projects    Experience
+            │            │            │
+            └────────────┼────────────┘
+                         ▼
+                   NORMALIZATION
+                         │
+                         ▼
+              DETERMINISTIC MATCHING
+                         │
+             ┌───────────┴───────────┐
+             ▼                       ▼
+       Skill Matching         Project Filtering
+             │                       │
+             │                       ▼
+             │                Project Candidates
+             │                       │
+             │                       ▼
+             │                Gemini Semantic
+             │                  Relevance
+             │                       │
+             └───────────┬───────────┘
+                         ▼
+                  FINAL SCORING
+                         │
+                         ▼
+                  RANKED RESULTS
+                         │
+                         ▼
+                     FIRESTORE
+```
+
+### Configurable Weights
+Scoring weights are configured in `phase_3/matcher/config.py` and must sum to 1.0.
+
+#### Overall Match Score Weights
+*   `REQUIRED_SKILL_WEIGHT = 0.50` (50%)
+*   `PREFERRED_SKILL_WEIGHT = 0.15` (15%)
+*   `TECHNOLOGY_WEIGHT = 0.15` (15%)
+*   `PROJECT_WEIGHT = 0.20` (20%)
+
+$$\text{Overall Score} = (S_{\text{req}} \times 0.50) + (S_{\text{pref}} \times 0.15) + (T \times 0.15) + (P \times 0.20)$$
+where $P$ is the average score of the top 3 ranked projects.
+
+#### Project Deterministic Scoring Weights
+*   `PROJECT_REQUIRED_WEIGHT = 0.40` (40%)
+*   `PROJECT_PREFERRED_WEIGHT = 0.15` (15%)
+*   `PROJECT_TECHNOLOGY_WEIGHT = 0.20` (20%)
+*   `PROJECT_KEYWORD_WEIGHT = 0.15` (15%)
+*   `PROJECT_CATEGORY_WEIGHT = 0.10` (10%)
+
+#### Project Final Score Blending
+If a project is within the top $N$ candidates (configured by `SEMANTIC_PROJECT_CANDIDATES = 5`), it is evaluated semantically using Gemini, and its score is blended:
+$$\text{Project Final Score} = (\text{Deterministic Score} \times 0.30) + (\text{Semantic Score} \times 0.70)$$
+Projects outside the top $N$ candidates retain their deterministic score.
+
+### Safety & Hallucination Protection
+An active evidence validation layer matches Gemini's returned claims against actual project details. If Gemini claims a technology match that does not exist in the project's technologies list, keywords, categories, or description/bullets, the validation layer:
+1. Filters it out of `matched_requirements`.
+2. Adds it to `missing_requirements`.
+3. Reduces the project relevance score proportionally.
+
+### Firestore Collections
+*   **Reads:** `job_descriptions`, `profiles`, `skills`, `projects`, `experience`, `certifications`.
+*   **Writes:** `job_matches` (auto-generated ID).
+
+### CLI Usage
+Run the matching engine using a Firestore JD document ID:
+
+```bash
+python -m phase_3.matcher.main <jd_document_id>
+```
+
+Add the `--json` flag to print the full validated JSON schema:
+```bash
+python -m phase_3.matcher.main <jd_document_id> --json
+```
+
+#### Output
+- Prints a clean, CP1252-safe ASCII match summary to stdout.
+- Saves the validated JSON locally to: `phase_3/output/<match_id>.json`.
+- Uploads the match to Firestore under the collection `job_matches/`.
+
+### Testing
+To run the Phase 3 test suite:
+```bash
+python -m pytest "phase_3/tests/" -c "phase_3/pytest.ini" -v
+```
+
+To run all tests (Phase 1 + Phase 2 + Phase 3):
+```bash
+python -m pytest tests/ -c pytest.ini -q
+python -m pytest "phase_2/tests/" -c "phase_2/pytest.ini" -q
+python -m pytest "phase_3/tests/" -c "phase_3/pytest.ini" -q
+```
+
