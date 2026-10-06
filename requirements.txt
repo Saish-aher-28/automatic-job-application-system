@@ -15,3 +15,8 @@ PyMuPDF>=1.24.0
 # Testing
 pytest>=8.0.0
 pytest-mock>=3.12.0
+
+# Phase 2/3/4 Gemini and Validation
+google-genai>=1.0.0
+pydantic>=2.0.0
+

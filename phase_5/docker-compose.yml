@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: phase_5/Dockerfile.backend
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      # SECURITY: Do NOT set SINGLE_USER_MODE=true in production deployments.
+      # Leave ENVIRONMENT=production to require Firebase authentication for all requests.
+      - ENVIRONMENT=production
+      - FIRESTORE_PROFILE_ID=main
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./backend-credentials.json:/app/credentials.json
+      - backend-latex-output:/app/latex/output
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: phase_5/Dockerfile.frontend
+      args:
+        - VITE_API_URL=http://localhost:8080
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  backend-latex-output:
+

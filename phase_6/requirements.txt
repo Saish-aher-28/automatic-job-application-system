@@ -1,0 +1,22 @@
+# ============================================================
+# Phase 6 — Job Discovery & Ingestion System
+# Python Dependencies
+# ============================================================
+
+# Telegram client integration
+telethon>=1.35.0
+
+# Gemini API Integration
+google-genai>=1.0.0
+
+# Schema definition and validation
+pydantic>=2.0.0
+
+# Firebase Firestore Access
+firebase-admin>=6.5.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Simple static HTML crawling
+beautifulsoup4>=4.12.0

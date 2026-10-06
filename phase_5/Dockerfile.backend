@@ -1,0 +1,58 @@
+# ── STAGE 1: BUILD GO BACKEND ────────────────────────────────────────────────
+FROM golang:1.20-bullseye AS builder
+WORKDIR /app
+COPY phase_5/backend/go.mod phase_5/backend/go.sum ./
+RUN go mod download
+COPY phase_5/backend/ ./
+RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
+
+# ── STAGE 2: PRODUCTION RUNNER ───────────────────────────────────────────────
+FROM debian:bullseye-slim
+WORKDIR /app
+
+# Install system dependencies: Python3, Pip, venv, curl, ca-certificates
+# Note: tectonic is installed via cargo (official method) for Linux compatibility
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    curl \
+    ca-certificates \
+    libssl-dev \
+    libfontconfig1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Tectonic (official binary release for Linux x86_64)
+# For ARM64 deployments, replace with the appropriate binary URL
+RUN curl -fsSL https://drop-sh.fullyjustified.net | sh && mv tectonic /usr/local/bin/tectonic
+
+# Copy Python CLI modules from project root (Phases 1–4 and shared modules)
+# NOTE: There is no phase_1/ directory — Phase 1 code lives in resume_engine/ and latex/
+COPY resume_engine/ /app/resume_engine/
+COPY latex/ /app/latex/
+COPY profile/ /app/profile/
+COPY phase_2/ /app/phase_2/
+COPY phase_3/ /app/phase_3/
+COPY phase_4/ /app/phase_4/
+COPY requirements.txt /app/
+
+# Setup Python virtual environment & install requirements
+RUN python3 -m venv /app/venv
+RUN /app/venv/bin/pip install --upgrade pip
+RUN /app/venv/bin/pip install -r /app/requirements.txt
+
+# Copy compiled Go server binary from builder stage
+COPY --from=builder /app/server /app/server
+
+# Setup environment variables
+ENV PORT=8080
+ENV PROJECT_ROOT=/app
+ENV PYTHON_PATH=/app/venv/bin/python
+# ENVIRONMENT defaults to "production" — secure by default.
+# Set ENVIRONMENT=development AND SINGLE_USER_MODE=true to enable dev bypass.
+# NEVER set SINGLE_USER_MODE=true in a production deployment.
+ENV ENVIRONMENT=production
+
+EXPOSE 8080
+
+CMD ["/app/server"]
