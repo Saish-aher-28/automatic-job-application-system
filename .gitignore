@@ -81,6 +81,8 @@ phase_2/output/*.json
 # =============================================================
 phase_5/backend/server
 phase_5/backend/*.exe
+*.exe
+tectonic.exe
 phase_5/backend/tmp/
 
 # =============================================================
