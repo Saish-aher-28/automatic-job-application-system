@@ -2,16 +2,17 @@
 # SECURITY — NEVER COMMIT THESE
 # =============================================================
 .env
-*.json
-!profile/projects/*.json
-!resume_engine/data/*.json
 serviceAccount*.json
 *serviceaccount*.json
 *service_account*.json
+*firebase-adminsdk*.json
 credentials*.json
 firebase*.json
 google-credentials*.json
 firebase-credentials/
+phase_3/output/
+
+
 
 # =============================================================
 # PYTHON
